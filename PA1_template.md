@@ -136,7 +136,7 @@ print(xt, type = "html",include.rownames = FALSE)
 ```
 
 <!-- html table generated in R 3.2.0 by xtable 1.7-4 package -->
-<!-- Wed Jun 10 23:17:39 2015 -->
+<!-- Thu Jun 11 20:06:21 2015 -->
 <table border=1>
 <caption align="bottom"> Statistics for Daily Total Number of Steps </caption>
 <tr> <th> Min. </th> <th> 1st Qu. </th> <th> Median </th> <th> Mean </th> <th> 3rd Qu. </th> <th> Max. </th>  </tr>
@@ -152,7 +152,10 @@ The median is 10,400 daily total steps and the mean is 9,354 daily total steps.
 meanStepsInterval = data.frame(mean = with(activityData, 
                                            tapply(steps, interval, 
                                                   function(x) mean(x, na.rm = TRUE))))
-plot(rownames(meanStepsInterval),meanStepsInterval$mean,type="l", main="Average Number of Daily Steps per 5-minute Interval", xlab = "5-minute Interval", ylab="" )
+meanStepsInterval$interval = as.integer(rownames(meanStepsInterval$mean))
+ggplot(data = meanStepsInterval, aes(x = interval , y = mean)) + geom_line(size = 1) + 
+        labs(y = "Number of steps", title = "Average Number of Daily Steps per 5-minute Interval") +
+        geom_smooth(method = "gam", formula = y ~ s(x, k = 15))
 ```
 
 ![](PA1_template_files/figure-html/question 2-1.png) 
@@ -194,7 +197,6 @@ The total number of rows with missing values is 2,304, which is a
 
 ```r
 activityData2 = activityData
-meanStepsInterval$interval = as.integer(rownames(meanStepsInterval$mean))
 for (i in 1:length(goodRows)) {
         if(!goodRows[i]) {
                 activityData2$steps[i] = meanStepsInterval$mean[which(meanStepsInterval$interval == 
@@ -224,14 +226,7 @@ library(ggplot2)
 g2 <- ggplot(data = stepsPerDay2, aes(stepsPerDay))
 g2 <- g2 + geom_histogram()+labs(x="Total number of steps in a day", y = "Frequency", title = "Histogram 2 (missing values imputed)")
 library(gridExtra)
-```
-
-```
-## Loading required package: grid
-```
-
-```r
-grid.arrange(g1 + ylim(0, 12.5), g2 + ylim(0, 12.5), nrow = 2)
+grid.arrange(g1 + ylim(0, 12.5), g2 + ylim(0, 12.5), ncol = 2)
 ```
 
 ![](PA1_template_files/figure-html/histogram2-1.png) 
@@ -245,7 +240,7 @@ print(xt, type = "html",include.rownames = FALSE)
 ```
 
 <!-- html table generated in R 3.2.0 by xtable 1.7-4 package -->
-<!-- Wed Jun 10 23:17:40 2015 -->
+<!-- Thu Jun 11 20:06:24 2015 -->
 <table border=1>
 <caption align="bottom"> Statistics for Daily Total Number of Steps (missing values imputed) </caption>
 <tr> <th> Min. </th> <th> 1st Qu. </th> <th> Median </th> <th> Mean </th> <th> 3rd Qu. </th> <th> Max. </th>  </tr>
@@ -291,12 +286,17 @@ meanStepsWeekend = data.frame(mean = with(activityData2[activityData2$wkd == "we
 meanStepsWeekend$interval = as.integer(rownames(meanStepsWeekend$mean))
 meanStepsWeekend$wkd = factor(rep("weekend"))
 meanSteps= rbind(meanStepsWeekday,meanStepsWeekend)
-ggplot(data = meanSteps) + geom_line(aes(x = interval , y = mean, group = wkd, 
+require(mgcv)
+g3 =ggplot(data = meanSteps) + geom_line(aes(x = interval , y = mean, group = wkd, 
     colour = wkd ), size = 1) + facet_wrap(~wkd, ncol = 1, scales = "free_y") + 
-    theme_bw() + theme(legend.position = "none") + labs(y = "Number of steps")
+    theme_bw() + theme(legend.position = "none") + labs(y = "Number of steps") +
+        ylim(range(meanSteps$mean))
+g3 + geom_smooth(aes(x= interval, y = mean, group = wkd) ,method = "gam", formula = y ~ s(x, k = 20), size = 1)
 ```
 
 ![](PA1_template_files/figure-html/weekd-1.png) 
 
 A new factor variable was created to indicate whether data was recorded on a weekday or a weekend day.  This variable was used to create daily activity patterns for intervals.  The average number of steps was calculated for each interval for weekdays and for weekend days and presented in the graphs below.  From this graphs, it might be inferred that during weekends, activity starts later than in weekdays, having peaks at around the same time, but the average activity is greater for weekend days and lasts a little later than in weekdays.  
+
+For comparing both patterns, a generalized additive model (GAM) was fitted to smooth on the interval variable.  Although the max for weekdays is high, the level of the smoother is greater for the weekend days than the level on weekdays.
 
